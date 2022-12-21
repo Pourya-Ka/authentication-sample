@@ -1,6 +1,12 @@
 package com.example.Authotication.jwt;
 
+import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import org.springframework.stereotype.Component;
@@ -14,10 +20,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@Getter
+@Setter
+@ConfigurationProperties(prefix = "application.jwt")
 @Component
 public class JwtUtils {
 
-    private String secretKey = "securesecuresecuresecuresecuresecuresecuresecuresecure";
+    private String secretKey;
+
+    public JwtUtils(@Value("${application.jwt.secretKey}") String secretKey) {
+        this.secretKey = secretKey;
+    }
 
 
     public String extractUsername(String token) {
