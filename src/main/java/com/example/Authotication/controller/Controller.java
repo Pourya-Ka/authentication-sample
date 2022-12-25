@@ -15,8 +15,14 @@ public class Controller {
     }
 
     @PostMapping()
-    public AuthTokensDTO getTokens(@RequestBody() UserAuth userAuth) {
+    public AuthTokensDTO getTokens(@RequestBody UserAuth userAuth) {
 
         return service.getTokens(userAuth);
+    }
+
+
+    @PostMapping("/refresh_token_valid")
+    public AuthTokensDTO refreshTKValid(@RequestParam String refreshToken) throws IllegalAccessException {
+        return service.refreshTKValid(refreshToken);
     }
 }
