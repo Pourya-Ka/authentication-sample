@@ -1,15 +1,15 @@
 package com.example.Authotication.jwt;
 
+import com.example.Authotication.model.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.impl.TextCodec;
 import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.http.HttpStatus;
 
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.function.Function;
@@ -47,7 +47,7 @@ public class JwtUtils {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
     }
 
@@ -55,23 +55,23 @@ public class JwtUtils {
         return extractExpiration(token).before(new Date());
     }
 
-    public String generateAccessToken(UserDetails userDetails) {
+    public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "access_token");
-        return createToken(claims, userDetails.getUsername(), tokenAccessExpirationAfterDays);
+        return createToken(claims, user.getId(), tokenAccessExpirationAfterDays);
     }
 
-    public String generateRefreshToken(UserDetails userDetails) {
+    public String generateRefreshToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh_token");
-        String token = createToken(claims, userDetails.getUsername(), tokenRefreshExpirationAfterDays);
+        String token = createToken(claims, user.getId(), tokenRefreshExpirationAfterDays);
         return token;
     }
 
 
-    private String createToken(Map<String, Object> claims, String subject, int expiration) {
-        ID_NUMBER++;
+    private String createToken(Map<String, Object> claims, Long id, int expiration) {
         return Jwts.builder().setClaims(claims)
+                .setSubject(String.valueOf(id))
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000 * expiration))
                 .setId(uuid.toString())
@@ -79,8 +79,8 @@ public class JwtUtils {
 
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
+    public void validateToken(String token, User user) {
+
         SigningKeyResolver signingKeyResolver = new SigningKeyResolverAdapter() {
             @Override
             public byte[] resolveSigningKeyBytes(JwsHeader header, Claims claims) {
@@ -92,26 +92,22 @@ public class JwtUtils {
                 .setSigningKeyResolver(signingKeyResolver)
                 .parseClaimsJws(token);
 
-        if (jws.getBody().get("type").toString().equals("refresh_token") &&
-                (username.equals(userDetails.getUsername()) && !isTokenExpired(token))
+        if (!
+                (jws.getBody().get("type").toString().equals("refresh_token") &&
+                        Long.valueOf(extractClaim(token, Claims::getSubject)).equals(user.getId()) && !isTokenExpired(token))
         )
-            return true;
-
-        return false;
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "token is invalidate");
     }
 
-    public boolean findByID(String token) {
-        String result = "A";
-        result = REFRESH_ID_LIST
+    public void findByID(String token) {
+        if (REFRESH_ID_LIST
                 .stream()
                 .filter(u -> u.equalsIgnoreCase(extractClaim(token, Claims::getId)))
-                .findFirst()
-                .orElse("");
-        if (result.equals(extractClaim(token, Claims::getId)))
-            return false;
-
-
+                .findAny()
+                .orElse("") != ""
+        ) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "this token used!");
+        }
         REFRESH_ID_LIST.add(extractClaim(token, Claims::getId));
-        return true;
     }
 }

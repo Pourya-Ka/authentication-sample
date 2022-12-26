@@ -1,9 +1,11 @@
 package com.example.Authotication.controller;
 
 import com.example.Authotication.model.AuthTokensDTO;
-import com.example.Authotication.model.UserAuth;
+import com.example.Authotication.model.User;
 import com.example.Authotication.service.Service;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("authentication")
@@ -14,10 +16,23 @@ public class Controller {
         this.service = service;
     }
 
-    @PostMapping()
-    public AuthTokensDTO getTokens(@RequestBody UserAuth userAuth) {
+    @GetMapping("users")
+    public List<User> getUsers(){
+        return service.getUsers();
+    }
+    @GetMapping("users/{user_id}")
+    public User getUsers(@PathVariable(value = "user_id",required = false) Long user_id){
+        return service.getUserById(user_id);
+    }
+    @PostMapping("add_user")
+    public List<User> addUser(@RequestBody User user){
+       return service.addUser(user);
+    }
 
-        return service.getTokens(userAuth);
+    @PostMapping()
+    public AuthTokensDTO getTokens(@RequestBody User user) {
+
+        return service.getTokens(user);
     }
 
 

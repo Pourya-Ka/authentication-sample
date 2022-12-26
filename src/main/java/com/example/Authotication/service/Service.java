@@ -2,19 +2,15 @@ package com.example.Authotication.service;
 
 import com.example.Authotication.jwt.JwtUtils;
 import com.example.Authotication.model.AuthTokensDTO;
-import com.example.Authotication.model.UserAuth;
+import com.example.Authotication.model.User;
 import com.example.Authotication.repository.Repository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 
@@ -22,23 +18,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class Service {
     private Repository repository;
-    private AuthenticationManager manager;
     private final JwtUtils jwtUtils;
     @Autowired
     private PasswordEncoder passwordEncoder;
 
 
-
     @Autowired
-    public Service(Repository repository, AuthenticationManager manager, JwtUtils jwtUtils) {
+    public Service(Repository repository, JwtUtils jwtUtils) {
         this.repository = repository;
-        this.manager = manager;
         this.jwtUtils = jwtUtils;
     }
 
-    public AuthTokensDTO getTokens(UserAuth request) {
-        final UserDetails user = repository.userFindByName(request.getName());
-        if (passwordEncoder.matches(request.getPassword(), user.getPassword()))
+    public AuthTokensDTO getTokens(User request) {
+        final User user = repository.userFindByName(request.getUsername());
+        if (passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())
+        )
             return new AuthTokensDTO(jwtUtils.generateAccessToken(user),
                     jwtUtils.generateRefreshToken(user)
             );
@@ -49,13 +45,30 @@ public class Service {
     }
 
     public AuthTokensDTO refreshTKValid(String refreshToken) throws IllegalAccessException {
-        final UserDetails userDetails = repository.userFindByName(jwtUtils.extractUsername(refreshToken));
+        final User user = repository.userFindById(
+                Long.valueOf(jwtUtils.extractClaim(refreshToken, Claims::getSubject))
+        );
 
-        if (jwtUtils.validateToken(refreshToken, userDetails) &&
-                jwtUtils.findByID(refreshToken)
-        )
-            return new AuthTokensDTO(jwtUtils.generateAccessToken(userDetails), jwtUtils.generateRefreshToken(userDetails));
+        jwtUtils.validateToken(refreshToken, user);
+        jwtUtils.findByID(refreshToken);
 
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "your password wrong!");
+        return new AuthTokensDTO(jwtUtils.generateAccessToken(user), jwtUtils.generateRefreshToken(user));
     }
+
+    public List<User> getUsers() {
+            return repository.findAll();
+    }
+
+    public User getUserById(Long user_id) {
+        return repository.userFindById(user_id);
+    }
+
+
+    public List<User> addUser(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        repository.saveUser(user);
+        return repository.findAll();
+    }
+
+
 }
