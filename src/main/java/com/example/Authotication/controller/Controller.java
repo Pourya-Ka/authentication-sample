@@ -5,6 +5,7 @@ import com.example.Authotication.model.User;
 import com.example.Authotication.service.Service;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.security.RolesAllowed;
 import java.util.List;
 
 @RestController
@@ -31,10 +32,8 @@ public class Controller {
 
     @PostMapping()
     public AuthTokensDTO getTokens(@RequestBody User user) {
-
         return service.getTokens(user);
     }
-
 
     @PostMapping("/refresh_token_valid")
     public AuthTokensDTO refreshTKValid(@RequestParam String refreshToken) throws IllegalAccessException {

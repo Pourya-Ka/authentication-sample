@@ -23,10 +23,9 @@ public class JwtUtils {
     private String secretKey;
     private int tokenAccessExpirationAfterDays;
     private int tokenRefreshExpirationAfterDays;
-    static int ID_NUMBER = 0;
+    private String tokenPerfix;
 
     static private List<String> REFRESH_ID_LIST = new ArrayList<>();
-
     UUID uuid = UUID.randomUUID();
 
 

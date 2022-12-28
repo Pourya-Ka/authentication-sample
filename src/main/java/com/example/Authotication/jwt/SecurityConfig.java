@@ -5,23 +5,19 @@ import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+
+import javax.servlet.Filter;
 
 import static com.example.Authotication.config.UserRole.*;
 
@@ -31,6 +27,7 @@ import static com.example.Authotication.config.UserRole.*;
 @AllArgsConstructor
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private Repository repository;
+    private JwtUtils jwtUtils;
     @Override
     protected void configure(HttpSecurity http) throws Exception {
 
@@ -39,17 +36,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
+                .addFilterAfter(new JwtTokenFilter(jwtUtils,repository), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests()
                 .antMatchers("/authentication/").permitAll()
                 .antMatchers("/authentication/refresh_token_valid").permitAll()
-                .antMatchers(HttpMethod.GET, "/authentication/users").hasAnyRole(ADMIN.name(),USER.name())
-                .antMatchers(HttpMethod.GET, "/authentication/users/**").hasRole(ADMIN.name())
-                .antMatchers(HttpMethod.POST, "/authentication/add_user").hasRole(ADMIN.name())
+                .antMatchers("/authentication/users").hasAnyAuthority(ADMIN.name(),USER.name())
+                .antMatchers("/authentication/users/**").hasAnyAuthority(ADMIN.name())
+                .antMatchers("/authentication/add_user").hasRole(ADMIN.name())
                 .anyRequest()
-                .authenticated()
-                .and()
-                .addFilterBefore(new JwtTokenVerifier(), null)
-                .httpBasic();
+                .authenticated();
+//                .and()
+//                .httpBasic();
 
     }
 
